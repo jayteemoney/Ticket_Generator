@@ -8,6 +8,7 @@ const TicketGenerator = () => {
   });
   const [errors, setErrors] = useState({});
   const [ticket, setTicket] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const savedData = JSON.parse(localStorage.getItem('ticketForm'));
@@ -26,11 +27,35 @@ const TicketGenerator = () => {
     if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Enter a valid email address';
     }
-    if (!formData.avatar || !formData.avatar.startsWith('http')) {
-      newErrors.avatar = 'Enter a valid image URL';
+    if (!formData.avatar) {
+      newErrors.avatar = 'Upload an image';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleImageUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setLoading(true);
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', 'dev_jaytee'); // 
+
+    try {
+      const response = await fetch(`https://api.cloudinary.com/v1_1/dalaunt4j/image/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await response.json();
+      setFormData((prev) => ({ ...prev, avatar: data.secure_url }));
+    } catch (error) {
+      console.error('Upload failed:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = (e) => {
@@ -47,36 +72,37 @@ const TicketGenerator = () => {
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block">Full Name</label>
-            <input 
-              type="text" 
-              value={formData.fullName} 
+            <input
+              type="text"
+              value={formData.fullName}
               onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-              className="w-full p-2 border rounded text-black" 
+              className="w-full p-2 border rounded text-black"
             />
             {errors.fullName && <p className="text-red-500">{errors.fullName}</p>}
           </div>
           <div className="mb-4">
             <label className="block">Email</label>
-            <input 
-              type="email" 
-              value={formData.email} 
+            <input
+              type="email"
+              value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full p-2 border rounded text-black" 
+              className="w-full p-2 border rounded text-black"
             />
             {errors.email && <p className="text-red-500">{errors.email}</p>}
           </div>
           <div className="mb-4">
-            <label className="block">Avatar URL (Cloudinary or external)</label>
-            <input 
-              type="text" 
-              value={formData.avatar} 
-              onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
-              className="w-full p-2 border rounded text-black" 
+            <label className="block">Upload Avatar</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="w-full p-2 border rounded bg-gray-700 cursor-pointer"
             />
+            {loading && <p className="text-yellow-400">Uploading...</p>}
             {errors.avatar && <p className="text-red-500">{errors.avatar}</p>}
           </div>
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="bg-blue-500 px-4 py-2 rounded text-white hover:bg-blue-700 w-full">
             Generate Ticket
           </button>
